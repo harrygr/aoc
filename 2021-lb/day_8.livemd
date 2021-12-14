@@ -1,0 +1,59 @@
+# Day 8
+
+## Setup
+
+```elixir
+Mix.install([:kino])
+
+input = Kino.Input.textarea("Input")
+```
+
+## Part 1
+
+```elixir
+unique_digit_line_count = [2, 4, 3, 7]
+
+input
+|> Kino.Input.read()
+|> String.split("\n")
+|> Stream.map(&String.split(&1, " | "))
+|> Stream.map(fn [_, output] -> output end)
+|> Stream.flat_map(&String.split(&1, " "))
+|> Enum.count(fn digit -> Enum.member?(unique_digit_line_count, String.length(digit)) end)
+```
+
+## Part 2
+
+```elixir
+segments = ["a", "b", "c", "d", "e", "f", "g"]
+initial_mappings = Enum.map(segments, fn segment -> {segment, segments} end) |> Enum.into(%{})
+```
+
+```elixir
+{input, output} =
+  "acedgfb cdfbe gcdfa fbcad dab cefabd cdfgeb eafb cagedb ab | cdfeb fcadb cdfeb cdbaf"
+  |> String.split(" | ")
+  |> then(fn [i, o] ->
+    {
+      i |> String.split() |> Enum.group_by(&byte_size/1, &String.to_charlist/1),
+      o |> String.split(" ") |> Enum.map(&String.to_charlist/1)
+    }
+  end)
+
+%{
+  2 => [one],
+  3 => [seven],
+  4 => [four],
+  5 => two_five_three,
+  6 => zero_nine_six,
+  7 => [eight]
+} = input
+
+supersets = fn numbers, pivot ->
+  Enum.filter(numbers, &match?([], pivot -- &1))
+end
+
+[nine] = supersets.(zero_nine_six, four)
+
+Enum.sort(nine)
+```

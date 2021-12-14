@@ -1,0 +1,133 @@
+# Untitled notebook
+
+## Setup
+
+```elixir
+Mix.install([:kino])
+
+input = Kino.Input.textarea("Paste input here")
+```
+
+```elixir
+defmodule Day4 do
+  def prepare_input(input) do
+    [numbers | boards] =
+      input
+      |> String.split("\n\n", trim: true)
+
+    boards =
+      boards
+      |> Stream.map(&String.split(&1, "\n", trim: true))
+      |> Stream.map(fn board ->
+        board
+        |> Stream.map(&String.split(&1, " ", trim: true))
+        |> Enum.reduce(&(&2 ++ &1))
+        |> Stream.with_index()
+        |> Stream.map(fn {n, i} ->
+          col = rem(i, 5)
+          row = div(i, 5)
+          {{col, row}, {n, false}}
+        end)
+        |> Enum.into(%{})
+      end)
+      |> Enum.into([])
+
+    {numbers |> String.split(","), boards}
+  end
+
+  def is_winner?(board) do
+    row_won?(board) or col_won?(board)
+  end
+
+  def row_won?(board) do
+    Enum.any?(0..4, fn row ->
+      Enum.all?(0..4, fn col ->
+        {_, marked} = Map.get(board, {col, row})
+        marked
+      end)
+    end)
+  end
+
+  def col_won?(board) do
+    Enum.any?(0..4, fn col ->
+      Enum.all?(0..4, fn row ->
+        {_, marked} = Map.get(board, {col, row})
+        marked
+      end)
+    end)
+  end
+
+  def mark_board(board, n) do
+    board
+    |> Stream.map(fn
+      {c, {^n, _}} -> {c, {n, true}}
+      v -> v
+    end)
+    |> Enum.into(%{})
+  end
+
+  def sum_unmarked(board) do
+    board
+    |> Stream.filter(fn
+      {_, {_, false}} -> true
+      _ -> false
+    end)
+    |> Stream.map(fn {_, {v, _}} -> String.to_integer(v) end)
+    |> Enum.sum()
+  end
+end
+```
+
+```elixir
+input = input |> Kino.Input.read() |> Day4.prepare_input()
+```
+
+## Section
+
+## Part 1
+
+```elixir
+{numbers, boards} = input
+
+{winning_number, winning_board} =
+  Enum.reduce_while(numbers, boards, fn n, boards ->
+    marked_boards = Enum.map(boards, &Day4.mark_board(&1, n))
+
+    case Enum.find(marked_boards, &Day4.is_winner?/1) do
+      nil -> {:cont, marked_boards}
+      board -> {:halt, {String.to_integer(n), board}}
+    end
+  end)
+
+unmarked_sum = Day4.sum_unmarked(winning_board)
+
+unmarked_sum * winning_number
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def find_last_winner(numbers, boards, pos) do
+    n = elem(numbers, pos)
+
+    case boards
+         |> Stream.map(&Day4.mark_board(&1, n))
+         |> Stream.filter(&(!Day4.is_winner?(&1)))
+         |> Enum.into([]) do
+      # there's one board left, so it must be the last to win. Find its winning number before returning
+      [last_board] -> Part1.find_first_winner(numbers, [last_board], pos + 1)
+      losing_boards -> find_last_winner(numbers, losing_boards, pos + 1)
+    end
+  end
+end
+```
+
+```elixir
+{numbers, boards} = input
+{n, winning_board} = Part2.find_last_winner(numbers, boards, 0)
+
+unmarked_sum = Day4.sum_unmarked(winning_board)
+
+unmarked_sum * n
+```

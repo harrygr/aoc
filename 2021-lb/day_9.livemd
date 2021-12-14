@@ -1,0 +1,47 @@
+# Day 9
+
+## Setup
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.4.1"}
+])
+```
+
+```elixir
+input = Kino.Input.textarea("Paste your input")
+```
+
+## Day 1
+
+```elixir
+heightmap =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n")
+  |> Stream.with_index()
+  |> Stream.flat_map(fn {row, y} ->
+    row
+    |> String.split("", trim: true)
+    |> Stream.with_index()
+    |> Stream.map(fn {height, x} -> {{x, y}, String.to_integer(height)} end)
+  end)
+  |> Enum.into(%{})
+```
+
+```elixir
+heightmap
+|> Stream.filter(fn {{x, y}, height} ->
+  neighbors = [
+    Map.get(heightmap, {x - 1, y}, 99),
+    Map.get(heightmap, {x + 1, y}, 99),
+    Map.get(heightmap, {x, y - 1}, 99),
+    Map.get(heightmap, {x, y + 1}, 99)
+  ]
+
+  Enum.all?(neighbors, &(&1 > height))
+end)
+|> Enum.map(fn {_, h} -> h end)
+|> Enum.map(&(&1 + 1))
+|> Enum.sum()
+```

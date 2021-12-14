@@ -1,0 +1,61 @@
+# Day 2
+
+## Setup
+
+```elixir
+Mix.install([:kino])
+```
+
+```elixir
+input =
+  Kino.Input.textarea("Paste input here",
+    default: """
+    forward 5
+    down 5
+    forward 8
+    up 3
+    down 8
+    forward 2
+    """
+  )
+```
+
+```elixir
+input =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+  |> Stream.map(fn
+    "forward " <> x -> {:forward, String.to_integer(x)}
+    "down " <> x -> {:down, String.to_integer(x)}
+    "up " <> x -> {:up, String.to_integer(x)}
+  end)
+```
+
+## Part 1
+
+```elixir
+{h, d} =
+  input
+  |> Enum.reduce({0, 0}, fn
+    {:forward, x}, {h, d} -> {h + x, d}
+    {:down, x}, {h, d} -> {h, d + x}
+    {:up, x}, {h, d} -> {h, d - x}
+  end)
+
+h * d
+```
+
+## Part 2
+
+```elixir
+{h, d, _aim} =
+  input
+  |> Enum.reduce({0, 0, 0}, fn
+    {:up, x}, {h, d, aim} -> {h, d, aim - x}
+    {:down, x}, {h, d, aim} -> {h, d, aim + x}
+    {:forward, x}, {h, d, aim} -> {h + x, d + aim * x, aim}
+  end)
+
+h * d
+```

@@ -1,0 +1,56 @@
+# Day 7
+
+## Setup
+
+```elixir
+Mix.install([:kino])
+
+input = Kino.Input.textarea("Input", default: "16,1,2,0,4,2,7,1,2,14")
+```
+
+```elixir
+input =
+  input
+  |> Kino.Input.read()
+  |> String.trim()
+  |> String.split(",", trim: true)
+  |> Stream.map(&String.to_integer/1)
+```
+
+## Part 1
+
+```elixir
+min = Enum.min(input)
+max = Enum.max(input)
+
+min..max
+|> Stream.map(fn target ->
+  total_fuel = Enum.reduce(input, 0, fn el, acc -> abs(el - target) + acc end)
+  {target, total_fuel}
+end)
+|> Enum.reduce(fn {pos, fuel}, {best_position, best_fuel} ->
+  if fuel < best_fuel, do: {pos, fuel}, else: {best_position, best_fuel}
+end)
+```
+
+## Part 2
+
+```elixir
+min = Enum.min(input)
+max = Enum.max(input)
+
+min..max
+|> Stream.map(fn target ->
+  total_fuel =
+    Enum.reduce(input, 0, fn el, acc ->
+      moves = abs(el - target)
+      fuel = div(moves * (moves + 1), 2)
+      fuel + acc
+    end)
+
+  {target, total_fuel}
+end)
+|> Enum.reduce(fn {pos, fuel}, {best_position, best_fuel} ->
+  if fuel < best_fuel, do: {pos, fuel}, else: {best_position, best_fuel}
+end)
+```
