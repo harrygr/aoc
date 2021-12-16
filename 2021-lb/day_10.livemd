@@ -1,0 +1,107 @@
+# Day 10
+
+## Setup
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+
+input = Kino.Input.textarea("Paste your input")
+```
+
+```elixir
+chunks =
+  Kino.Input.read(input)
+  |> String.split(["\n"], trim: true)
+  |> Stream.map(&String.split(&1, "", trim: true))
+```
+
+```elixir
+defmodule Chunks do
+  @pairs %{
+    "(" => ")",
+    "[" => "]",
+    "<" => ">",
+    "{" => "}"
+  }
+
+  def pairs, do: @pairs
+
+  def validate_chunk(chunk) do
+    stack =
+      Enum.reduce_while(chunk, [], fn
+        el, [] ->
+          {:cont, [el]}
+
+        el, stack when el in ["(", "[", "<", "{"] ->
+          {:cont, [el | stack]}
+
+        "(", [")" | stack] ->
+          {:cont, stack}
+
+        "[", ["]" | stack] ->
+          {:cont, stack}
+
+        "{", ["}" | stack] ->
+          {:cont, stack}
+
+        "<", [">" | stack] ->
+          {:cont, stack}
+
+        el, [head | stack] ->
+          if el == @pairs[head] do
+            {:cont, stack}
+          else
+            {:halt, {:error, %{expected: @pairs[head], char: el}}}
+          end
+      end)
+
+    case stack do
+      [] -> :valid
+      {:error, error} -> {:error, error}
+      _ -> {:incomplete, stack}
+    end
+  end
+end
+```
+
+## Part 1
+
+```elixir
+scores = %{")" => 3, "]" => 57, "}" => 1197, ">" => 25137}
+
+chunks
+|> Stream.map(&Chunks.validate_chunk/1)
+|> Stream.map(fn
+  {:error, %{char: char}} -> scores[char]
+  _ -> 0
+end)
+|> Enum.sum()
+```
+
+## Part 2
+
+```elixir
+scores = %{
+  ")" => 1,
+  "]" => 2,
+  "}" => 3,
+  ">" => 4
+}
+
+chunks
+|> Enum.map(&Chunks.validate_chunk/1)
+|> Enum.filter(fn
+  {:incomplete, _} -> true
+  _ -> false
+end)
+|> Enum.map(fn {_, stack} ->
+  stack
+  |> Enum.reverse()
+  |> Enum.reduce([], fn char, completions -> [Chunks.pairs()[char] | completions] end)
+end)
+|> Enum.map(fn completions ->
+  Enum.reduce(completions, 0, fn char, score -> score * 5 + scores[char] end)
+end)
+|> Enum.sort()
+|> then(fn s -> Enum.at(s, div(Enum.count(s), 2)) end)
+```

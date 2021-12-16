@@ -9,10 +9,19 @@ Mix.install([
 ```
 
 ```elixir
-input = Kino.Input.textarea("Paste your input")
+input =
+  Kino.Input.textarea("Paste your input",
+    default: """
+    2199943210
+    3987894921
+    9856789892
+    8767896789
+    9899965678
+    """
+  )
 ```
 
-## Day 1
+## Part 1
 
 ```elixir
 heightmap =
@@ -30,18 +39,69 @@ heightmap =
 ```
 
 ```elixir
-heightmap
-|> Stream.filter(fn {{x, y}, height} ->
-  neighbors = [
-    Map.get(heightmap, {x - 1, y}, 99),
-    Map.get(heightmap, {x + 1, y}, 99),
-    Map.get(heightmap, {x, y - 1}, 99),
-    Map.get(heightmap, {x, y + 1}, 99)
-  ]
+lowpoints =
+  heightmap
+  |> Stream.filter(fn {{x, y}, height} ->
+    neighbors = [
+      Map.get(heightmap, {x - 1, y}, 99),
+      Map.get(heightmap, {x + 1, y}, 99),
+      Map.get(heightmap, {x, y - 1}, 99),
+      Map.get(heightmap, {x, y + 1}, 99)
+    ]
 
-  Enum.all?(neighbors, &(&1 > height))
-end)
-|> Enum.map(fn {_, h} -> h end)
-|> Enum.map(&(&1 + 1))
+    Enum.all?(neighbors, &(&1 > height))
+  end)
+  |> Enum.into([])
+```
+
+```elixir
+lowpoints
+|> Stream.map(fn {_, h} -> h end)
+|> Stream.map(&(&1 + 1))
 |> Enum.sum()
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def get_basin(coords, heightmap) do
+    traverse_basin(%{}, coords, heightmap)
+  end
+
+  defp traverse_basin(basin, {x, y} = coords, heightmap) do
+    # IO.inspect({coords, Map.get(heightmap, coords)})
+
+    case Map.get(heightmap, coords) do
+      9 ->
+        basin
+
+      nil ->
+        basin
+
+      height ->
+        if Map.has_key?(basin, coords) do
+          basin
+        else
+          basin
+          |> Map.put(coords, height)
+          |> traverse_basin({x - 1, y}, heightmap)
+          |> traverse_basin({x + 1, y}, heightmap)
+          |> traverse_basin({x, y - 1}, heightmap)
+          |> traverse_basin({x, y + 1}, heightmap)
+        end
+    end
+  end
+end
+```
+
+```elixir
+lowpoints
+|> Stream.map(fn {lowpoint_coords, _} ->
+  Part2.get_basin(lowpoint_coords, heightmap)
+end)
+|> Stream.map(&Enum.count/1)
+|> Enum.sort(:desc)
+|> Stream.take(3)
+|> Enum.product()
 ```
