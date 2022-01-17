@@ -1,0 +1,122 @@
+# Day 11
+
+## Section
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+
+input = Kino.Input.textarea("Paste your input")
+```
+
+```elixir
+grid =
+  Kino.Input.read(input)
+  |> String.split("\n")
+  |> Stream.with_index()
+  |> Stream.flat_map(fn {row, y} ->
+    row
+    |> String.split("", trim: true)
+    |> Stream.map(&Integer.parse/1)
+    |> Stream.map(fn {n, _} -> n end)
+    |> Stream.with_index()
+    |> Stream.map(fn {n, x} -> {{x, y}, {n, false}} end)
+  end)
+  |> Enum.into(%{})
+```
+
+```elixir
+defmodule Day11 do
+  def step(grid) do
+    flashed_grid =
+      grid
+      |> Enum.map(fn {coords, {n, _}} -> {coords, {n + 1, false}} end)
+      |> Enum.into(%{})
+      |> process_flashes
+
+    flash_count = Enum.count(flashed_grid, fn {_, {_, flashed}} -> flashed end)
+
+    g2 =
+      Enum.map(flashed_grid, fn
+        {coords, {_, true}} -> {coords, {0, false}}
+        {coords, {n, false}} -> {coords, {n, false}}
+      end)
+
+    {flash_count, g2}
+  end
+
+  def process_flashes(grid) do
+    if about_to_flash?(grid) do
+      grid
+      |> Enum.reduce(grid, fn
+        {{x, y}, {n, false}}, acc when n > 9 ->
+          acc
+          |> Map.replace({x, y}, {0, true})
+          |> update_existing({x - 1, y}, &raise_energy/1)
+          |> update_existing({x + 1, y}, &raise_energy/1)
+          |> update_existing({x - 1, y - 1}, &raise_energy/1)
+          |> update_existing({x + 1, y + 1}, &raise_energy/1)
+          |> update_existing({x - 1, y + 1}, &raise_energy/1)
+          |> update_existing({x + 1, y - 1}, &raise_energy/1)
+          |> update_existing({x, y + 1}, &raise_energy/1)
+          |> update_existing({x, y - 1}, &raise_energy/1)
+
+        _, acc ->
+          acc
+      end)
+      |> process_flashes
+    else
+      grid
+    end
+  end
+
+  defp raise_energy({v, flashed}) do
+    {v + 1, flashed}
+  end
+
+  defp about_to_flash?(grid) do
+    Enum.any?(grid, fn
+      {_, {n, false}} when n > 9 -> true
+      _ -> false
+    end)
+  end
+
+  def update_existing(map, key, fun) do
+    case map do
+      %{^key => old} -> %{map | key => fun.(old)}
+      %{} -> map
+    end
+  end
+end
+
+# %{{0, 0} => 9, {0, 1} => 1, {1, 0} => 1}
+# |> Enum.map(fn {coords, n} -> {coords, {n + 1, false}} end)
+# |> Enum.into(%{})
+# |> Day11.process_flashes()
+```
+
+## Part 1
+
+```elixir
+Enum.reduce(1..100, {0, grid}, fn _, {flash_count, grid} ->
+  {new_flashes, updated_grid} = Day11.step(grid)
+  {flash_count + new_flashes, updated_grid}
+end)
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def find_simul_flash(step, grid) do
+    {_, updated_grid} = Day11.step(grid)
+
+    if Enum.all?(updated_grid, fn {_, {n, _}} -> n === 0 end) do
+      step + 1
+    else
+      find_simul_flash(step + 1, updated_grid)
+    end
+  end
+end
+
+Part2.find_simul_flash(0, grid)
+```
