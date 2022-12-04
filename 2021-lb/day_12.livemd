@@ -1,0 +1,30 @@
+# Untitled notebook
+
+## Section
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.4.1"}
+])
+```
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+edges =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+  |> Enum.reduce(%{}, fn line, acc ->
+    [left, right] = String.split(line, "-")
+    acc = Map.update(acc, left, [right], &[right | &1])
+
+    if left == "start" or right == "end" do
+      acc
+    else
+      Map.update(acc, right, [left], &[left | &1])
+    end
+  end)
+```

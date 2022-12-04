@@ -1,0 +1,70 @@
+# Day 1
+
+## Setup
+
+```elixir
+Mix.install([:kino])
+```
+
+```elixir
+input =
+  Kino.Input.textarea("Paste input here",
+    default: """
+    1000
+    2000
+    3000
+
+    4000
+
+    5000
+    6000
+
+    7000
+    8000
+    9000
+
+    10000
+    """
+  )
+```
+
+```elixir
+snack_totals =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n\n", trim: true)
+  |> Stream.map(fn snacks ->
+    snacks
+    |> String.split("\n", trim: true)
+    |> Stream.map(&String.to_integer/1)
+    |> Enum.sum()
+  end)
+```
+
+## Part 1
+
+```elixir
+Enum.max(snack_totals)
+```
+
+## Part 2
+
+```elixir
+snack_totals
+|> Enum.sort(:desc)
+|> Enum.take(3)
+|> IO.inspect()
+|> Enum.sum()
+
+# alternative approach
+# snack_totals
+# |> Enum.reduce([], fn 
+# el, [] -> [el]
+# el, [a] -> [a, el]
+# el, [a, b] -> Enum.sort([a,b,el], :desc)
+# el, [a,b,c] when el > a -> ([el,b,c])
+# el, [a,b,c] when el > b -> ([a,el,c])
+# el, [a,b,c] when el > c -> ([a,b,el])
+# _, els -> els
+# end)
+```
