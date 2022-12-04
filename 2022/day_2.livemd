@@ -1,0 +1,112 @@
+# Day 2
+
+## Setup
+
+```elixir
+Mix.install([:kino])
+```
+
+```elixir
+input =
+  Kino.Input.textarea("Paste input here",
+    default: """
+    A Y
+    B X
+    C Z
+    """
+  )
+```
+
+```elixir
+games =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+  |> Stream.map(&String.split(&1, " ", trim: true))
+  |> Stream.map(&List.to_tuple/1)
+```
+
+## Part 1
+
+```elixir
+defmodule RockPaperScissors1 do
+  def get_shape("A"), do: :rock
+  def get_shape("X"), do: :rock
+  def get_shape("B"), do: :paper
+  def get_shape("Y"), do: :paper
+  def get_shape("C"), do: :scissors
+  def get_shape("Z"), do: :scissors
+
+  def shape_score(:rock), do: 1
+  def shape_score(:paper), do: 2
+  def shape_score(:scissors), do: 3
+
+  def get_result(opponent_shape, my_shape) when opponent_shape == my_shape, do: :draw
+  def get_result(:rock, :paper), do: :win
+  def get_result(:paper, :rock), do: :loss
+  def get_result(:rock, :scissors), do: :loss
+  def get_result(:scissors, :rock), do: :win
+  def get_result(:scissors, :paper), do: :loss
+  def get_result(:paper, :scissors), do: :win
+
+  def result_score(:win), do: 6
+  def result_score(:draw), do: 3
+  def result_score(:loss), do: 0
+
+  def get_score({opponent_move, my_move}) do
+    opponent_shape = get_shape(opponent_move)
+    my_shape = get_shape(my_move)
+
+    shape_score(my_shape) + (get_result(opponent_shape, my_shape) |> result_score)
+  end
+end
+
+games
+|> Stream.map(&RockPaperScissors1.get_score/1)
+|> Enum.sum()
+```
+
+## Part 2
+
+```elixir
+defmodule RockPaperScissors2 do
+  def get_shape("A"), do: :rock
+  def get_shape("B"), do: :paper
+  def get_shape("C"), do: :scissors
+
+  def get_response("X"), do: :loss
+  def get_response("Y"), do: :draw
+  def get_response("Z"), do: :win
+
+  def shape_score(:rock), do: 1
+  def shape_score(:paper), do: 2
+  def shape_score(:scissors), do: 3
+
+  def get_shape_for_result(shape, :draw), do: shape
+  def get_shape_for_result(:rock, :win), do: :paper
+  def get_shape_for_result(:rock, :loss), do: :scissors
+  def get_shape_for_result(:paper, :win), do: :scissors
+  def get_shape_for_result(:paper, :loss), do: :rock
+  def get_shape_for_result(:scissors, :win), do: :rock
+  def get_shape_for_result(:scissors, :loss), do: :paper
+
+  def result_score(:win), do: 6
+  def result_score(:draw), do: 3
+  def result_score(:loss), do: 0
+
+  def get_score({opponent_move, my_response}) do
+    opponent_shape = get_shape(opponent_move)
+    intended_result = get_response(my_response)
+
+    my_shape = get_shape_for_result(opponent_shape, intended_result)
+
+    shape_score(my_shape) + result_score(intended_result)
+  end
+end
+```
+
+```elixir
+games
+|> Stream.map(&RockPaperScissors2.get_score/1)
+|> Enum.sum()
+```
