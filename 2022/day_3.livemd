@@ -1,0 +1,69 @@
+# Day 3
+
+## Setup
+
+```elixir
+Mix.install([:kino])
+```
+
+```elixir
+input =
+  Kino.Input.textarea("Paste input here",
+    default: """
+    vJrwpWtwJgWrhcsFMMfFFhFp
+    jqHRNqRjqzjGDLGLrsFMfFZSrLrFZsSL
+    PmmdzqPrVvPwwTWBwg
+    wMqvLMZHhHMvwLHjbvcjnnSBnvTQFn
+    ttgJtRGJQctTZtZT
+    CrZsJsPPZsGzwwsLwLmpwMDw
+    """
+  )
+```
+
+```elixir
+rucksacks =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+```
+
+```elixir
+defmodule Rucksack do
+  def priority(lowercase_char) when lowercase_char >= 97 and lowercase_char <= 122 do
+    lowercase_char - 96
+  end
+
+  def priority(uppercase_char) when uppercase_char >= 65 and uppercase_char < 97 do
+    uppercase_char - 38
+  end
+end
+```
+
+## Part 1
+
+```elixir
+rucksacks
+|> Stream.map(&to_charlist/1)
+|> Stream.map(&Enum.split(&1, div(Enum.count(&1), 2)))
+|> Stream.map(fn {comp_1, comp_2} ->
+  MapSet.intersection(MapSet.new(comp_1), MapSet.new(comp_2))
+end)
+|> Stream.flat_map(&MapSet.to_list/1)
+|> Stream.map(&Rucksack.priority/1)
+|> Enum.sum()
+```
+
+## Part 2
+
+```elixir
+rucksacks
+|> Stream.map(&to_charlist/1)
+|> Stream.chunk_every(3)
+|> Stream.flat_map(fn [r_1, r_2, r_3] ->
+  MapSet.new(r_1)
+  |> MapSet.intersection(MapSet.new(r_2))
+  |> MapSet.intersection(MapSet.new(r_3))
+end)
+|> Stream.map(&Rucksack.priority/1)
+|> Enum.sum()
+```

@@ -1,0 +1,75 @@
+# Day 4
+
+## Setup
+
+```elixir
+Mix.install([:kino])
+```
+
+```elixir
+input =
+  Kino.Input.textarea("Paste input here",
+    default: """
+    2-4,6-8
+    2-3,4-5
+    5-7,7-9
+    2-8,3-7
+    6-6,4-6
+    2-6,4-8
+    """
+  )
+```
+
+```elixir
+sections =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+  |> Stream.map(&String.split(&1, ","))
+  |> Stream.map(fn pair ->
+    pair
+    |> Stream.map(&String.split(&1, "-"))
+    |> Stream.map(&Enum.map(&1, fn s -> String.to_integer(s) end))
+    |> Enum.map(&List.to_tuple/1)
+  end)
+  |> Enum.map(&List.to_tuple/1)
+```
+
+```elixir
+defmodule CampCleanup do
+  def fully_contains?({s1, e1}, {s2, e2}) do
+    cond do
+      s1 >= s2 and e1 <= e2 -> true
+      s2 >= s1 and e2 <= e1 -> true
+      true -> false
+    end
+  end
+
+  def partially_contains?({s1, e1}, {s2, e2}) do
+    cond do
+      e1 >= s2 and s1 <= s2 -> true
+      e2 >= s1 and s2 <= s1 -> true
+      true -> false
+    end
+  end
+end
+```
+
+## Part 1
+
+```elixir
+sections
+|> Stream.map(fn {x1, x2} -> CampCleanup.fully_contains?(x1, x2) end)
+|> Stream.filter(& &1)
+|> Enum.count()
+```
+
+## Part 2
+
+```elixir
+sections
+|> Stream.map(fn {x1, x2} -> CampCleanup.partially_contains?(x1, x2) end)
+|> Enum.map(&IO.inspect/1)
+|> Stream.filter(& &1)
+|> Enum.count()
+```
