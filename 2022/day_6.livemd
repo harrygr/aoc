@@ -1,0 +1,42 @@
+# Day 6
+
+## Setup
+
+```elixir
+Mix.install([:kino])
+```
+
+```elixir
+input =
+  Kino.Input.text("Paste input here",
+    default: "mjqjpqmgbljsphdztnvjfqwrcgsmlb"
+  )
+```
+
+```elixir
+datastream = Kino.Input.read(input)
+```
+
+## Part 1
+
+```elixir
+marker_length = 4
+
+datastream
+|> String.splitter("", trim: true)
+|> Stream.chunk_every(marker_length, 1)
+|> Enum.find_index(&(MapSet.size(MapSet.new(&1)) === marker_length))
+|> Kernel.+(marker_length)
+```
+
+## Part 2
+
+```elixir
+marker_length = 14
+
+datastream
+|> String.splitter("", trim: true)
+|> Stream.chunk_every(marker_length, 1)
+|> Enum.find_index(&(MapSet.size(MapSet.new(&1)) === marker_length))
+|> Kernel.+(marker_length)
+```

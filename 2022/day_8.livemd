@@ -1,0 +1,114 @@
+# Day 8
+
+## Setup
+
+```elixir
+Mix.install([:kino])
+```
+
+```elixir
+input =
+  Kino.Input.textarea("Paste input here",
+    default: """
+    30373
+    25512
+    65332
+    33549
+    35390
+    """
+  )
+```
+
+```elixir
+trees = Kino.Input.read(input)
+
+forest =
+  trees
+  |> String.splitter("\n", trim: true)
+  |> Stream.with_index()
+  |> Stream.flat_map(fn {row, y} ->
+    row
+    |> String.splitter("", trim: true)
+    |> Stream.with_index()
+    |> Stream.map(fn {height, x} -> {{x, y}, String.to_integer(height)} end)
+  end)
+  |> Enum.into(%{})
+```
+
+## Part 1
+
+```elixir
+defmodule Forest do
+  def is_visible?(_, _, {0, _}), do: true
+  def is_visible?(_, _, {_, 0}), do: true
+  def is_visible?(_, {xm, _}, {xm, _}), do: true
+  def is_visible?(_, {_, ym}, {_, ym}), do: true
+
+  def is_visible?(forest, {forest_width, forest_length}, {x, y}) do
+    tree_height = forest[{x, y}]
+
+    Enum.all?((x - 1)..0, fn n -> forest[{n, y}] < tree_height end) or
+      Enum.all?((x + 1)..forest_width, fn n -> forest[{n, y}] < tree_height end) or
+      Enum.all?((y - 1)..0, fn n -> forest[{x, n}] < tree_height end) or
+      Enum.all?((y + 1)..forest_length, fn n -> forest[{x, n}] < tree_height end)
+  end
+end
+
+{forest_width, forest_length} =
+  Enum.reduce(forest, {0, 0}, fn {{x, y}, _}, {max_x, max_y} ->
+    {max(x, max_x), max(y, max_y)}
+  end)
+
+forest
+|> Enum.filter(fn {coords, _} ->
+  Forest.is_visible?(forest, {forest_width, forest_length}, coords)
+end)
+|> Enum.count()
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def scenic_score(_forest, _dims, {0, _}), do: 0
+  def scenic_score(_forest, _dims, {_, 0}), do: 0
+  def scenic_score(_, {xm, _}, {xm, _}), do: 0
+  def scenic_score(_, {_, ym}, {_, ym}), do: 0
+
+  def scenic_score(forest, {forest_width, forest_length}, {x, y}) do
+    tree_height = forest[{x, y}]
+
+    up =
+      (y - 1)..0
+      |> Enum.reduce_while(0, fn n, acc ->
+        if forest[{x, n}] < tree_height, do: {:cont, acc + 1}, else: {:halt, acc + 1}
+      end)
+
+    left =
+      (x - 1)..0
+      |> Enum.reduce_while(0, fn n, acc ->
+        if forest[{n, y}] < tree_height, do: {:cont, acc + 1}, else: {:halt, acc + 1}
+      end)
+
+    right =
+      (x + 1)..forest_width
+      |> Enum.reduce_while(0, fn n, acc ->
+        if forest[{n, y}] < tree_height, do: {:cont, acc + 1}, else: {:halt, acc + 1}
+      end)
+
+    down =
+      (y + 1)..forest_length
+      |> Enum.reduce_while(0, fn n, acc ->
+        if forest[{x, n}] < tree_height, do: {:cont, acc + 1}, else: {:halt, acc + 1}
+      end)
+
+    up * down * left * right
+  end
+end
+
+forest
+|> Stream.map(fn {coords, _} ->
+  Part2.scenic_score(forest, {forest_width, forest_length}, coords)
+end)
+|> Enum.max()
+```

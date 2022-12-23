@@ -1,0 +1,139 @@
+# Day 7
+
+## Setup
+
+```elixir
+Mix.install([:kino])
+```
+
+```elixir
+input =
+  Kino.Input.textarea("Paste input here",
+    default: """
+    $ cd /
+    $ ls
+    dir a
+    14848514 b.txt
+    8504156 c.dat
+    dir d
+    $ cd a
+    $ ls
+    dir e
+    29116 f
+    2557 g
+    62596 h.lst
+    $ cd e
+    $ ls
+    584 i
+    $ cd ..
+    $ cd ..
+    $ cd d
+    $ ls
+    4060174 j
+    8033020 d.log
+    5626152 d.ext
+    7214296 k
+    """
+  )
+```
+
+```elixir
+lines = Kino.Input.read(input)
+```
+
+```elixir
+defmodule FileSystem do
+  @moduledoc """
+  Parse a list of commands and produce a list of the full path of 
+  each directory and its respective filesize.
+  """
+  def parse_commands(lines) do
+    initial = {"/", %{}}
+
+    lines
+    |> String.splitter("\n", trim: true)
+    |> Enum.reduce(initial, fn
+      "$ cd ..", {current_dir, filesystem} ->
+        {move_out(current_dir), filesystem}
+
+      "$ cd /", {_current_dir, filesystem} ->
+        {"/", filesystem}
+
+      "$ cd " <> target, {current_dir, filesystem} ->
+        {move_in(current_dir, target), filesystem}
+
+      "$ ls", acc ->
+        acc
+
+      "dir " <> _dir_name, acc ->
+        acc
+
+      file_name_and_size, {current_dir, filesystem} ->
+        # when the result is a file, add its size to the current dir and all parent dirs
+        size = parse_file_size(file_name_and_size)
+
+        {current_dir, update_filesizes(current_dir, filesystem, size)}
+    end)
+  end
+
+  defp update_filesizes("/", filesystem, size), do: update_directory_size(filesystem, "/", size)
+
+  defp update_filesizes(current_dir, filesystem, size) do
+    update_filesizes(
+      move_out(current_dir),
+      update_directory_size(filesystem, current_dir, size),
+      size
+    )
+  end
+
+  defp update_directory_size(filesystem, dir, size) do
+    Map.update(filesystem, dir, size, &(&1 + size))
+  end
+
+  defp parse_file_size(file_name_and_size) do
+    [size, _name] = String.split(file_name_and_size, " ", trim: true)
+
+    String.to_integer(size)
+  end
+
+  defp move_out("/"), do: "/"
+
+  defp move_out(path) do
+    [_ | rest] = path |> String.splitter("/", trim: true) |> Enum.reverse()
+
+    "/" <> (rest |> Enum.reverse() |> Enum.join("/"))
+  end
+
+  defp move_in("/", target_dir), do: "/#{target_dir}"
+  defp move_in(current_dir, target_dir), do: "#{current_dir}/#{target_dir}"
+end
+```
+
+```elixir
+{_, filesystem} = FileSystem.parse_commands(lines)
+```
+
+## Part 1
+
+```elixir
+filesystem
+|> Stream.map(fn {_, size} -> size end)
+|> Stream.filter(fn size -> size <= 100_000 end)
+|> Enum.sum()
+```
+
+## Part 2
+
+```elixir
+total_space = 70_000_000
+free_space = total_space - filesystem["/"]
+
+target_space = 30_000_000
+needed_to_delete = target_space - free_space
+
+filesystem
+|> Enum.reduce(total_space, fn
+  {_, size}, candidate when size < candidate and size >= needed_to_delete -> size
+  _, candidate -> candidate
+end)
+```

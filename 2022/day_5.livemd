@@ -1,0 +1,115 @@
+# Day 5
+
+## Setup
+
+```elixir
+Mix.install([:kino])
+```
+
+```elixir
+input =
+  Kino.Input.textarea("Paste input here",
+    default: """
+        [D]    
+    [N] [C]    
+    [Z] [M] [P]
+     1   2   3 
+
+    move 1 from 2 to 1
+    move 3 from 1 to 3
+    move 2 from 2 to 1
+    move 1 from 1 to 2
+    """
+  )
+```
+
+```elixir
+[crates, instructions] =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n\n", trim: true)
+
+instructions =
+  instructions
+  |> String.splitter("\n", trim: true)
+  |> Stream.map(
+    &Regex.named_captures(~r/move (?<count>\d+) from (?<start_pos>\d+) to (?<end_pos>\d+)/, &1)
+  )
+  |> Stream.map(&Stream.map(&1, fn {k, v} -> {String.to_atom(k), String.to_integer(v)} end))
+  |> Enum.map(&Enum.into(&1, %{}))
+
+# e.g. [
+#   %{count: 1, end_pos: 1, start_pos: 2},
+#   %{count: 3, end_pos: 3, start_pos: 1},
+#   %{count: 2, end_pos: 1, start_pos: 2},
+#   %{count: 1, end_pos: 2, start_pos: 1}
+# ]
+
+crates =
+  crates
+  |> String.split("\n", trim: true)
+  |> Stream.map(fn line ->
+    line
+    |> String.codepoints()
+    |> Stream.chunk_every(4)
+    |> Stream.map(fn [_, crate | _] -> crate end)
+  end)
+  |> Stream.zip_with(& &1)
+  |> Enum.map(&Enum.reject(&1, fn c -> String.trim(c) === "" end))
+
+# e.g. [[" ", "N", "Z", "1"], ["D", "C", "M", "2"], [" ", " ", "P", "3"]]
+```
+
+## Part 1
+
+```elixir
+defmodule Part1 do
+  def move_crates(0, source_stack, dest_stack) do
+    {source_stack, dest_stack}
+  end
+
+  def move_crates(remaining, [crate | remaining_source], dest_stack) do
+    move_crates(remaining - 1, remaining_source, [crate | dest_stack])
+  end
+end
+
+instructions
+|> Enum.reduce(crates, fn %{count: count, start_pos: start_pos, end_pos: end_pos}, stacks ->
+  source_stack = Enum.at(stacks, start_pos - 1)
+  dest_stack = Enum.at(stacks, end_pos - 1)
+
+  {new_source, new_dest} = Part1.move_crates(count, source_stack, dest_stack)
+
+  stacks
+  |> List.replace_at(start_pos - 1, new_source)
+  |> List.replace_at(end_pos - 1, new_dest)
+end)
+|> Stream.map(&List.first/1)
+|> Enum.join("")
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def move_crates(count, source_stack, dest_stack) do
+    {crates, new_source} = Enum.split(source_stack, count)
+
+    {new_source, crates ++ dest_stack}
+  end
+end
+
+instructions
+|> Enum.reduce(crates, fn %{count: count, start_pos: start_pos, end_pos: end_pos}, stacks ->
+  source_stack = Enum.at(stacks, start_pos - 1)
+  dest_stack = Enum.at(stacks, end_pos - 1)
+
+  {new_source, new_dest} = Part2.move_crates(count, source_stack, dest_stack)
+
+  stacks
+  |> List.replace_at(start_pos - 1, new_source)
+  |> List.replace_at(end_pos - 1, new_dest)
+end)
+|> Stream.map(&List.first/1)
+|> Enum.join("")
+```

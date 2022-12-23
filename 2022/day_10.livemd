@@ -1,0 +1,223 @@
+# Day 10
+
+## Setup
+
+```elixir
+Mix.install([:kino])
+```
+
+```elixir
+input =
+  Kino.Input.textarea("Paste input here",
+    default: """
+    addx 15
+    addx -11
+    addx 6
+    addx -3
+    addx 5
+    addx -1
+    addx -8
+    addx 13
+    addx 4
+    noop
+    addx -1
+    addx 5
+    addx -1
+    addx 5
+    addx -1
+    addx 5
+    addx -1
+    addx 5
+    addx -1
+    addx -35
+    addx 1
+    addx 24
+    addx -19
+    addx 1
+    addx 16
+    addx -11
+    noop
+    noop
+    addx 21
+    addx -15
+    noop
+    noop
+    addx -3
+    addx 9
+    addx 1
+    addx -3
+    addx 8
+    addx 1
+    addx 5
+    noop
+    noop
+    noop
+    noop
+    noop
+    addx -36
+    noop
+    addx 1
+    addx 7
+    noop
+    noop
+    noop
+    addx 2
+    addx 6
+    noop
+    noop
+    noop
+    noop
+    noop
+    addx 1
+    noop
+    noop
+    addx 7
+    addx 1
+    noop
+    addx -13
+    addx 13
+    addx 7
+    noop
+    addx 1
+    addx -33
+    noop
+    noop
+    noop
+    addx 2
+    noop
+    noop
+    noop
+    addx 8
+    noop
+    addx -1
+    addx 2
+    addx 1
+    noop
+    addx 17
+    addx -9
+    addx 1
+    addx 1
+    addx -3
+    addx 11
+    noop
+    noop
+    addx 1
+    noop
+    addx 1
+    noop
+    noop
+    addx -13
+    addx -19
+    addx 1
+    addx 3
+    addx 26
+    addx -30
+    addx 12
+    addx -1
+    addx 3
+    addx 1
+    noop
+    noop
+    noop
+    addx -9
+    addx 18
+    addx 1
+    addx 2
+    noop
+    noop
+    addx 9
+    noop
+    noop
+    noop
+    addx -1
+    addx 2
+    addx -37
+    addx 1
+    addx 3
+    noop
+    addx 15
+    addx -21
+    addx 22
+    addx -6
+    addx 1
+    noop
+    addx 2
+    addx 1
+    noop
+    addx -10
+    noop
+    noop
+    addx 20
+    addx 1
+    addx 2
+    addx 2
+    addx -6
+    addx -11
+    noop
+    noop
+    noop
+    """
+  )
+```
+
+```elixir
+instructions =
+  Kino.Input.read(input)
+  |> String.split("\n", trim: true)
+  |> Stream.map(fn
+    "addx " <> v -> {:addx, String.to_integer(v)}
+    "noop" -> :noop
+  end)
+  |> Enum.into([])
+```
+
+```elixir
+defmodule ClockCircuit do
+  def process_instruction(:noop, {cycle, x}), do: [{cycle + 1, x}]
+
+  def process_instruction({:addx, v}, {cycle, x}) do
+    [{cycle + 2, x + v}, {cycle + 1, x}]
+  end
+end
+```
+
+```elixir
+cycles =
+  instructions
+  |> Enum.reduce([{1, 1}], fn ins, acc ->
+    [current | _] = acc
+    new = ClockCircuit.process_instruction(ins, current)
+    new ++ acc
+  end)
+```
+
+## Part 1
+
+```elixir
+cycles
+|> Stream.filter(fn {cycle, _} -> cycle == 20 or rem(cycle - 20, 40) == 0 end)
+|> Stream.map(fn {cycle, x} -> cycle * x end)
+|> Enum.sum()
+```
+
+## Part 2
+
+```elixir
+instructions
+|> Enum.reduce([{0, 1}], fn ins, acc ->
+  [current | _] = acc
+  new = ClockCircuit.process_instruction(ins, current)
+  new ++ acc
+end)
+|> Enum.reverse()
+|> Stream.map(fn {c, x} ->
+  pixel = rem(c, 40)
+  sprite_pos = [x - 1, x, x + 1]
+  if Enum.member?(sprite_pos, pixel), do: "#", else: " "
+end)
+|> Stream.chunk_every(40)
+|> Stream.map(&Enum.join(&1, ""))
+|> Enum.join("\n")
+|> then(&"<pre>#{&1}</pre>")
+|> Kino.Markdown.new()
+```

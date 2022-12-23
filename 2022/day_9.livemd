@@ -1,0 +1,142 @@
+# Day 9
+
+## Setup
+
+```elixir
+Mix.install([:kino])
+```
+
+```elixir
+input =
+  Kino.Input.textarea("Paste input here",
+    default: """
+    R 4
+    U 4
+    L 3
+    D 1
+    R 4
+    D 1
+    L 5
+    R 2
+    """
+  )
+```
+
+```elixir
+instructions =
+  Kino.Input.read(input)
+  |> String.split("\n", trim: true)
+  |> Stream.map(&String.split(&1, " ", trim: true))
+  |> Stream.map(&List.to_tuple/1)
+  |> Enum.map(fn {direction, distance} ->
+    {direction |> String.downcase() |> String.to_atom(), String.to_integer(distance)}
+  end)
+```
+
+```elixir
+defmodule Printer do
+  def print_rope(rope) do
+    {min_x, min_y, max_x, max_y} =
+      Enum.reduce(rope, {1, 1, 1, 1}, fn {x, y}, {left, down, right, up} ->
+        {min(left, x - 1), min(down, y - 1), max(right, x + 1), max(up, y + 1)}
+      end)
+
+    [{hx, hy} | tail] = rope
+
+    min_y..max_y
+    |> Enum.map(fn y ->
+      min_x..max_x
+      |> Enum.map(fn x ->
+        cond do
+          x == hx and y == hy -> "H"
+          Enum.any?(tail, fn {tx, ty} -> x == tx and y == ty end) -> "#"
+          true -> "•"
+        end
+      end)
+      |> Enum.join("")
+    end)
+    |> Enum.reverse()
+    |> Enum.join("\n")
+    |> Kernel.<>("\n\n")
+    |> IO.puts()
+
+    rope
+  end
+end
+```
+
+```elixir
+defmodule Rope do
+  def move(rope, {_direction, 0}, tail_positions) do
+    Printer.print_rope(rope)
+    {rope, tail_positions}
+  end
+
+  def move([head | tail], {direction, steps}, tail_positions) do
+    new_rope =
+      Enum.scan([step(head, direction) | tail], fn el, acc ->
+        follow(acc, el)
+      end)
+
+    [new_tail | _] = Enum.reverse(new_rope)
+
+    # IO.inspect({direction, steps})
+    # Printer.print_rope(new_rope)
+    move(new_rope, {direction, steps - 1}, MapSet.put(tail_positions, new_tail))
+  end
+
+  # overlap, no move
+  def follow({x, y}, {x, y}), do: {x, y}
+  # same row, move tail left or right
+  def follow({hx, y}, {tx, y}) when abs(hx - tx) == 1, do: {tx, y}
+  def follow({hx, y}, {tx, y}) when hx > tx, do: {tx + 1, y}
+  def follow({hx, y}, {tx, y}) when hx < tx, do: {tx - 1, y}
+  # same col, move tail up or down
+  def follow({x, hy}, {x, ty}) when abs(hy - ty) == 1, do: {x, ty}
+  def follow({x, hy}, {x, ty}) when hy > ty, do: {x, ty + 1}
+  def follow({x, hy}, {x, ty}) when hy < ty, do: {x, ty - 1}
+
+  # diagonal neighbour, no move
+  def follow({hx, hy}, {tx, ty}) when abs(hx - tx) + abs(hy - ty) == 2, do: {tx, ty}
+
+  # move tail closer diagonally
+  def follow({hx, hy}, {tx, ty}) do
+    {dx, dy} = {hx - tx, hy - ty}
+
+    {tx + div(dx, abs(dx)), ty + div(dy, abs(dy))}
+  end
+
+  defp step({x, y}, :u), do: {x, y + 1}
+  defp step({x, y}, :d), do: {x, y - 1}
+  defp step({x, y}, :l), do: {x - 1, y}
+  defp step({x, y}, :r), do: {x + 1, y}
+end
+```
+
+## Part 1
+
+```elixir
+rope = [{0, 0}, {0, 0}]
+
+{_, visited} =
+  instructions
+  |> Enum.reduce({rope, MapSet.new()}, fn ins, {rope, visited} ->
+    Rope.move(rope, ins, visited)
+  end)
+
+MapSet.size(visited)
+```
+
+## Part 2
+
+```elixir
+rope = 1..10 |> Enum.map(fn _ -> {0, 0} end)
+
+{final_rope, visited} =
+  instructions
+  |> Enum.reduce({rope, MapSet.new()}, fn instruction, {rope, visited} ->
+    Rope.move(rope, instruction, visited)
+  end)
+
+Enum.count(visited)
+```
