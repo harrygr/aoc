@@ -1,0 +1,88 @@
+# Day 6
+
+```elixir
+Mix.install([:kino])
+```
+
+## Get input
+
+```elixir
+input =
+  Kino.Input.textarea("Paste input here",
+    default: """
+    Time:      7  15   30
+    Distance:  9  40  200
+    """
+  )
+```
+
+```elixir
+parsed_input =
+  Kino.Input.read(input)
+  |> String.split("\n", trim: true)
+  |> then(fn ["Time:" <> times, "Distance:" <> distances] -> [times, distances] end)
+```
+
+```elixir
+defmodule Helper do
+  def find_winning_button_press({time, distance}) do
+    Enum.find(0..time, fn speed ->
+      resulting_distance = speed * (time - speed)
+      resulting_distance > distance
+    end)
+  end
+end
+```
+
+## Part 1
+
+```elixir
+races =
+  parsed_input
+  |> Enum.map(fn s -> s |> String.split(" ", trim: true) |> Enum.map(&String.to_integer/1) end)
+  |> List.zip()
+```
+
+```elixir
+races
+|> Enum.map(fn {time, distance} ->
+  winning_button_hold = Helper.find_winning_button_press({time, distance})
+  time - 2 * winning_button_hold + 1
+end)
+|> Enum.product()
+```
+
+## Part 2
+
+```elixir
+race =
+  parsed_input
+  |> Enum.map(fn s ->
+    s
+    |> String.split(" ", trim: true)
+    |> Enum.join()
+    |> then(&String.to_integer/1)
+  end)
+  |> List.to_tuple()
+```
+
+```elixir
+{time, distance} = race
+winning_button_hold = Helper.find_winning_button_press({time, distance})
+
+dbg(winning_button_hold)
+
+time - 2 * winning_button_hold + 1
+```
+
+```elixir
+d_win = 233_101_111_101_487
+time = 40_828_492
+
+# d = x * (time - x) where x = 0..time
+#  -> d = x * time - x^2
+
+d = time - x
+counts = time - 2 * d + 1
+# counts = time - 2 * x * time - x^2 + 1
+```

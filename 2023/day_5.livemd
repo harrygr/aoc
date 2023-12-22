@@ -1,0 +1,132 @@
+# Day 5
+
+```elixir
+Mix.install([:kino])
+```
+
+## Get input
+
+```elixir
+input =
+  Kino.Input.textarea("Paste input here",
+    default: """
+    seeds: 79 14 55 13
+
+    seed-to-soil map:
+    50 98 2
+    52 50 48
+
+    soil-to-fertilizer map:
+    0 15 37
+    37 52 2
+    39 0 15
+
+    fertilizer-to-water map:
+    49 53 8
+    0 11 42
+    42 0 7
+    57 7 4
+
+    water-to-light map:
+    88 18 7
+    18 25 70
+
+    light-to-temperature map:
+    45 77 23
+    81 45 19
+    68 64 13
+
+    temperature-to-humidity map:
+    0 69 1
+    1 0 69
+
+    humidity-to-location map:
+    60 56 37
+    56 93 4
+    """
+  )
+```
+
+```elixir
+
+```
+
+```elixir
+input_txt = Kino.Input.read(input)
+
+[seed_part | almanac_part] = String.split(input_txt, "\n\n", trim: true)
+
+seeds =
+  Regex.run(~r/(:?\d+\s?+)+/, seed_part)
+  |> List.first()
+  |> String.split(" ", trim: true)
+  |> Enum.map(&String.to_integer/1)
+
+alamanac =
+  almanac_part
+  |> Stream.flat_map(&String.split(&1, "\n\n", trim: true))
+  |> Stream.map(&String.split(&1, "\n", trim: true))
+  |> Enum.map(fn [map_name | mappings] ->
+    [_, in_category, out_category] = Regex.run(~r/([a-z]+)\-to\-([a-z]+)\smap:/, map_name)
+
+    {{in_category, out_category},
+     Enum.map(mappings, fn nums ->
+       [dest_start, source_start, len] = String.split(nums, " ") |> Enum.map(&String.to_integer/1)
+       {dest_start, source_start, len}
+     end)}
+  end)
+```
+
+```elixir
+defmodule Helper do
+  def trace_route([], n) do
+    n
+  end
+
+  def trace_route([{_, ranges} | almanac], n) do
+    # find the range that applies to the current value
+    {dest, source, _} =
+      Enum.find(ranges, {0, 0, 0}, fn
+        {_dest, source, len} -> n >= source and n < source + len
+      end)
+
+    # apply the conversion before going to the next one
+    trace_route(almanac, n + (dest - source))
+  end
+end
+```
+
+## Part 1
+
+```elixir
+seeds
+|> Enum.map(fn seed ->
+  Helper.trace_route(alamanac, seed)
+end)
+|> Enum.min()
+```
+
+## Part 2
+
+```elixir
+seeds_from_ranges =
+  Regex.run(~r/(:?\d+\s?+)+/, seed_part)
+  |> List.first()
+  |> String.split(" ", trim: true)
+  |> Stream.map(&String.to_integer/1)
+  |> Stream.chunk_every(2)
+  |> Stream.map(fn [start, len] -> Range.new(start, start + len - 1) end)
+
+dbg(seeds_from_ranges |> Enum.into([]))
+```
+
+```elixir
+# brute force; takes 30mins
+seeds_from_ranges
+|> Stream.map(fn seed ->
+  Helper.trace_route(alamanac, seed)
+end)
+
+# |> dbg()
+# |> Enum.min()
+```

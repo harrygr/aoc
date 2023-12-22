@@ -1,0 +1,96 @@
+# Day 2
+
+```elixir
+Mix.install([:kino])
+```
+
+## Get input
+
+```elixir
+input =
+  Kino.Input.textarea("Paste input here",
+    default: """
+    Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green
+    Game 2: 1 blue, 2 green; 3 green, 4 blue, 1 red; 1 green, 1 blue
+    Game 3: 8 green, 6 blue, 20 red; 5 blue, 4 red, 13 green; 5 green, 1 red
+    Game 4: 1 green, 3 red, 6 blue; 3 green, 6 red; 3 green, 15 blue, 14 red
+    Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green
+    """
+  )
+```
+
+```elixir
+defmodule Helper do
+  def is_game_possible?(reveals) do
+    max_red = 12
+    max_green = 13
+    max_blue = 14
+
+    reveals
+    |> Enum.all?(fn reveal ->
+      Map.get(reveal, "red", 0) <= max_red and
+        Map.get(reveal, "green", 0) <= max_green and
+        Map.get(reveal, "blue", 0) <= max_blue
+    end)
+  end
+end
+```
+
+```elixir
+parsed_input =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+  |> Stream.map(fn str ->
+    [game, cubes] =
+      String.split(str, "Game ")
+      |> Kernel.then(fn [_, s] -> String.split(s, ": ") end)
+
+    reveals =
+      cubes
+      |> String.split("; ")
+      |> Stream.map(fn subset ->
+        String.split(subset, ", ")
+        |> Stream.map(&String.split(&1, " "))
+        |> Stream.map(&List.to_tuple/1)
+        |> Stream.map(fn {count, colour} ->
+          {count_i, _} = Integer.parse(count)
+          {colour, count_i}
+        end)
+        |> Enum.into(%{})
+      end)
+
+    {game_i, _} = Integer.parse(game)
+    {game_i, reveals}
+  end)
+```
+
+## Part 1
+
+```elixir
+parsed_input
+|> Stream.filter(fn {_, reveals} -> Helper.is_game_possible?(reveals) end)
+|> Stream.map(fn {game, _} -> game end)
+|> Enum.sum()
+```
+
+## Part 2
+
+```elixir
+parsed_input
+|> Stream.map(fn {_, reveals} ->
+  reveals
+  |> Enum.reduce(
+    %{"red" => 0, "green" => 0, "blue" => 0},
+    fn x, %{"red" => max_r, "green" => max_g, "blue" => max_b} ->
+      %{
+        "red" => max(max_r, Map.get(x, "red", 0)),
+        "green" => max(max_g, Map.get(x, "green", 0)),
+        "blue" => max(max_b, Map.get(x, "blue", 0))
+      }
+    end
+  )
+end)
+|> Stream.map(fn %{"red" => r, "green" => g, "blue" => b} -> r * g * b end)
+|> Enum.sum()
+```
