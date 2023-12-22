@@ -1,0 +1,214 @@
+# Day 7
+
+```elixir
+Mix.install([:kino])
+```
+
+## Get input
+
+```elixir
+input =
+  Kino.Input.textarea("Paste input here",
+    default: """
+    32T3K 765
+    T55J5 684
+    KK677 28
+    KTJJT 220
+    QQQJA 483
+    """
+  )
+```
+
+```elixir
+parsed_input =
+  Kino.Input.read(input)
+  |> String.split("\n", trim: true)
+  |> Stream.map(&String.split(&1, " "))
+```
+
+## Part 1
+
+```elixir
+defmodule CamelPoker.NormalRules do
+  def to_card_value(card) do
+    case card do
+      "T" -> "10"
+      "J" -> "11"
+      "Q" -> "12"
+      "K" -> "13"
+      "A" -> "14"
+      n -> n
+    end
+    |> then(&String.to_integer/1)
+  end
+
+  def compare({hand_1, _}, {hand_2, _}) do
+    type_1 = hand_type(hand_1)
+    type_2 = hand_type(hand_2)
+
+    cond do
+      type_1 > type_2 ->
+        :lt
+
+      type_1 < type_2 ->
+        :gt
+
+      true ->
+        Stream.zip(hand_1, hand_2)
+        |> Enum.reduce_while(:eq, fn
+          {c, c}, acc -> {:cont, acc}
+          {c1, c2}, _acc when c1 > c2 -> {:halt, :lt}
+          {c1, c2}, _acc when c1 < c2 -> {:halt, :gt}
+        end)
+    end
+  end
+
+  def hand_type(hand) do
+    case Enum.sort(hand) do
+      # five of a kind
+      [a, a, a, a, a] -> 6
+      # four of a kind
+      [a, a, a, a, _b] -> 5
+      [_b, a, a, a, a] -> 5
+      # full house
+      [a, a, a, b, b] -> 4
+      [a, a, b, b, b] -> 4
+      # three of a kind
+      [a, a, a, _b, _c] -> 3
+      [_a, b, b, b, _c] -> 3
+      [_a, _b, c, c, c] -> 3
+      # two pair
+      [a, a, b, b, _c] -> 2
+      [_a, b, b, c, c] -> 2
+      [a, a, _b, c, c] -> 2
+      # one pair
+      [a, a, _b, _c, _d] -> 1
+      [_a, b, b, _c, _d] -> 1
+      [_a, _b, c, c, _d] -> 1
+      [_a, _b, _c, d, d] -> 1
+      # high card
+      [_a, _b, _c, _d, _e] -> 0
+    end
+  end
+end
+```
+
+```elixir
+parsed_input
+|> Enum.map(fn [hand, bid] ->
+  parsed_hand =
+    hand
+    |> String.split("", trim: true)
+    |> Stream.map(&CamelPoker.NormalRules.to_card_value/1)
+
+  {parsed_hand, String.to_integer(bid)}
+end)
+|> Enum.sort(CamelPoker.NormalRules)
+|> Enum.reverse()
+|> Stream.with_index()
+|> Stream.map(fn {{_, bid}, rank} -> (rank + 1) * bid end)
+|> Enum.sum()
+```
+
+## Part 2
+
+```elixir
+defmodule CamelPoker.JokerRules do
+  def to_card_value(card) do
+    case card do
+      "T" -> "10"
+      "J" -> "1"
+      "Q" -> "12"
+      "K" -> "13"
+      "A" -> "14"
+      n -> n
+    end
+    |> then(&String.to_integer/1)
+  end
+
+  def compare({hand_1, _}, {hand_2, _}) do
+    type_1 = hand_type(hand_1)
+    type_2 = hand_type(hand_2)
+
+    cond do
+      type_1 > type_2 ->
+        :lt
+
+      type_1 < type_2 ->
+        :gt
+
+      true ->
+        Stream.zip(hand_1, hand_2)
+        |> Enum.reduce_while(:eq, fn
+          {c, c}, acc -> {:cont, acc}
+          {c1, c2}, _acc when c1 > c2 -> {:halt, :lt}
+          {c1, c2}, _acc when c1 < c2 -> {:halt, :gt}
+        end)
+    end
+  end
+
+  def hand_type(hand) do
+    case Enum.sort(hand) do
+      # five of a kind
+      [a, a, a, a, a] -> 6
+      [1, a, a, a, a] -> 6
+      [1, 1, a, a, a] -> 6
+      [1, 1, 1, a, a] -> 6
+      [1, 1, 1, 1, _a] -> 6
+      # four of a kind
+      [a, a, a, a, _b] -> 5
+      [1, a, a, a, _b] -> 5
+      [1, _a, b, b, b] -> 5
+      [1, 1, a, a, _b] -> 5
+      [1, 1, _a, b, b] -> 5
+      [1, 1, 1, _a, _b] -> 5
+      [_b, a, a, a, a] -> 5
+      # full house
+      [a, a, a, b, b] -> 4
+      [1, a, a, b, b] -> 4
+      [1, 1, _a, b, b] -> 4
+      [a, a, b, b, b] -> 4
+      [1, _a, b, b, b] -> 4
+      # three of a kind
+      [a, a, a, _b, _c] -> 3
+      [1, a, a, _b, _c] -> 3
+      [1, 1, _a, _b, _c] -> 3
+      [1, _a, b, b, _c] -> 3
+      [_a, b, b, b, _c] -> 3
+      [_a, _b, c, c, c] -> 3
+      [1, _a, _b, c, c] -> 3
+      # two pair
+      [a, a, b, b, _c] -> 2
+      [1, _a, b, b, _c] -> 2
+      [_a, b, b, c, c] -> 2
+      [a, a, _b, c, c] -> 2
+      [1, _a, _b, c, c] -> 2
+      # one pair
+      [a, a, _b, _c, _d] -> 1
+      [1, _a, _b, _c, _d] -> 1
+      [_a, b, b, _c, _d] -> 1
+      [_a, _b, c, c, _d] -> 1
+      [_a, _b, _c, d, d] -> 1
+      # high card
+      [_a, _b, _c, _d, _e] -> 0
+    end
+  end
+end
+```
+
+```elixir
+parsed_input
+|> Stream.map(fn [hand, bid] ->
+  parsed_hand =
+    hand
+    |> String.split("", trim: true)
+    |> Enum.map(&CamelPoker.JokerRules.to_card_value/1)
+
+  {parsed_hand, String.to_integer(bid)}
+end)
+|> Enum.sort(CamelPoker.JokerRules)
+|> Enum.reverse()
+|> Stream.with_index()
+|> Stream.map(fn {{_, bid}, rank} -> (rank + 1) * bid end)
+|> Enum.sum()
+```
