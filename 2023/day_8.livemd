@@ -1,0 +1,116 @@
+# Day 8
+
+```elixir
+Mix.install([:kino])
+```
+
+## Get input
+
+```elixir
+input =
+  Kino.Input.textarea("Paste input here",
+    default: """
+    RL
+
+    AAA = (BBB, CCC)
+    BBB = (DDD, EEE)
+    CCC = (ZZZ, GGG)
+    DDD = (DDD, DDD)
+    EEE = (EEE, EEE)
+    GGG = (GGG, GGG)
+    ZZZ = (ZZZ, ZZZ)
+    """
+  )
+```
+
+```elixir
+{instructions, network} =
+  Kino.Input.read(input)
+  |> String.split("\n\n", trim: true)
+  |> then(fn [instructions, network] ->
+    n =
+      network
+      |> String.split("\n", trim: true)
+      |> Enum.map(&String.split(&1, " = "))
+      |> Enum.map(fn [target, dests] ->
+        [_, l, r] = Regex.run(~r/\(([A-Z0-9]+)\,\s([A-Z0-9]+)\)/, dests)
+        {target, {l, r}}
+      end)
+      |> Enum.into(%{})
+
+    {String.split(instructions, "", trim: true), n}
+  end)
+```
+
+## Part 1
+
+```elixir
+defmodule Part1 do
+  def ride(_instructions, _network, step, "ZZZ") do
+    step
+  end
+
+  def ride(instructions, network, step, node) do
+    {l, r} = network[node]
+    ins_idx = rem(step, Enum.count(instructions))
+
+    case Enum.at(instructions, ins_idx) do
+      "R" -> ride(instructions, network, step + 1, r)
+      "L" -> ride(instructions, network, step + 1, l)
+    end
+  end
+end
+
+Part1.ride(instructions, network, 0, "AAA")
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def find_steps_to_end(instructions, network, step, node) do
+    ins_idx = rem(step, Enum.count(instructions))
+    {l, r} = network[node]
+
+    next_node =
+      case Enum.at(instructions, ins_idx) do
+        "R" -> r
+        "L" -> l
+      end
+
+    if String.last(next_node) === "Z" do
+      step + 1
+    else
+      find_steps_to_end(instructions, network, step + 1, next_node)
+    end
+  end
+end
+
+defmodule Math do
+  def gcd(a, 0), do: a
+  def gcd(a, b), do: gcd(b, rem(a, b))
+
+  def lcm(a, b), do: div(abs(a * b), gcd(a, b))
+
+  def lcm_list([]), do: 1
+
+  def lcm_list([h | t]) do
+    Enum.reduce(t, h, &lcm/2)
+  end
+end
+
+starting_nodes =
+  network
+  |> Map.keys()
+  |> Enum.filter(fn
+    node -> String.last(node) === "A"
+  end)
+
+steps_to_finish =
+  starting_nodes
+  |> Enum.map(fn node ->
+    Part2.find_steps_to_end(instructions, network, 0, node)
+  end)
+
+Math.lcm_list(steps_to_finish)
+```

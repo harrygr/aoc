@@ -1,0 +1,111 @@
+# Day 10
+
+```elixir
+Mix.install([:kino])
+```
+
+## Get input
+
+```elixir
+input =
+  Kino.Input.textarea("Paste input here",
+    default: """
+    .....
+    .S-7.
+    .|.|.
+    .L-J.
+    .....
+    """
+  )
+```
+
+```elixir
+pipes =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+  |> Stream.map(fn line -> String.split(line, "", trim: true) end)
+  |> Stream.map(&Enum.with_index/1)
+  |> Stream.with_index()
+  |> Stream.flat_map(fn {line, y} -> Stream.map(line, fn {item, x} -> {{x, y}, item} end) end)
+  |> Enum.into(%{})
+```
+
+```elixir
+defmodule PipeMaze do
+  def get_loop(pipes, {prev, curr}, loop) do
+    connections = get_connections(pipes, curr) |> Enum.filter(fn conn -> conn !== prev end)
+
+    case connections do
+      [] -> loop
+      [next | _rest] -> get_loop(pipes, {curr, next}, [next | loop])
+    end
+  end
+
+  def get_connections(pipes, {x, y}) do
+    point = pipes[{x, y}]
+    neighbors = [{"w", {x - 1, y}}, {"n", {x, y - 1}}, {"e", {x + 1, y}}, {"s", {x, y + 1}}]
+
+    neighbors
+    |> Enum.filter(fn
+      {"w", coords} -> is_west_connection?(point, pipes[coords])
+      {"e", coords} -> is_east_connection?(point, pipes[coords])
+      {"n", coords} -> is_north_connection?(point, pipes[coords])
+      {"s", coords} -> is_south_connection?(point, pipes[coords])
+    end)
+    |> Enum.map(fn {_, coords} -> coords end)
+  end
+
+  def is_west_connection?(from, to) when from in ["-", "7", "J", "S"] and to in ["-", "F", "L"],
+    do: true
+
+  def is_west_connection?(_, _), do: false
+
+  def is_east_connection?(from, to) when from in ["-", "F", "L", "S"] and to in ["-", "7", "J"],
+    do: true
+
+  def is_east_connection?(_, _), do: false
+
+  def is_north_connection?(from, to) when from in ["|", "J", "L", "S"] and to in ["F", "7", "|"],
+    do: true
+
+  def is_north_connection?(_, _), do: false
+
+  def is_south_connection?(from, to) when from in ["|", "7", "F", "S"] and to in ["|", "J", "L"],
+    do: true
+
+  def is_south_connection?(_, _), do: false
+end
+```
+
+## Part 1
+
+```elixir
+{start, _} = pipes |> Enum.find(fn {_, c} -> c === "S" end)
+
+loop = PipeMaze.get_loop(pipes, {start, start}, [start])
+
+furthest_point = div(Enum.count(loop), 2)
+```
+
+## Part 2
+
+```elixir
+{start, _} = pipes |> Enum.find(fn {_, c} -> c === "S" end)
+
+loop = PipeMaze.get_loop(pipes, {start, start}, [start])
+
+loop
+# Shoelace: https://en.wikipedia.org/wiki/Shoelace_formula
+|> then(fn [head | tail] -> [head | tail] ++ [head] end)
+|> Stream.chunk_every(2, 1, :discard)
+|> Stream.map(fn [{x1, y1}, {x2, y2}] ->
+  x1 * y2 - y1 * x2
+end)
+|> Enum.sum()
+|> then(&div(&1, 2))
+|> then(&abs/1)
+# Pick's Theorum: https://en.wikipedia.org/wiki/Pick%27s_theorem
+# i = A + 1 - b/2
+|> then(fn area -> area + 1 - div(length(loop), 2) end)
+```

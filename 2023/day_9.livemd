@@ -1,0 +1,65 @@
+# Day 9
+
+```elixir
+Mix.install([:kino])
+```
+
+## Get input
+
+```elixir
+input =
+  Kino.Input.textarea("Paste input here",
+    default: """
+    0 3 6 9 12 15
+    1 3 6 10 15 21
+    10 13 16 21 30 45
+    """
+  )
+```
+
+```elixir
+parsed_input =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+  |> Stream.map(&String.split(&1, " ", trim: true))
+  |> Enum.map(fn ns -> Enum.map(ns, &String.to_integer/1) end)
+```
+
+```elixir
+defmodule MirageMaintenance do
+  def get_next(sequence) do
+    [head | tail] = sequence
+
+    if Enum.all?(tail, &(&1 === head)) do
+      # all elements are the same, so we know the next value
+      head
+    else
+      differences = get_differences(sequence)
+      List.last(tail) + get_next(differences)
+    end
+  end
+
+  def get_differences(sequence) do
+    Stream.chunk_every(sequence, 2, 1, :discard)
+    |> Enum.map(fn [a, b] -> b - a end)
+  end
+end
+```
+
+## Part 1
+
+```elixir
+parsed_input
+|> Stream.map(&MirageMaintenance.get_next/1)
+|> Enum.sum()
+```
+
+## Part 2
+
+```elixir
+parsed_input
+|> Stream.map(&Enum.reverse/1)
+|> Stream.map(&MirageMaintenance.get_next/1)
+|> Enum.sum()
+```

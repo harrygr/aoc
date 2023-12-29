@@ -1,0 +1,156 @@
+# Day 11
+
+```elixir
+Mix.install([:kino])
+```
+
+## Get input
+
+```elixir
+input =
+  Kino.Input.textarea("Paste input here",
+    default: """
+    ...#......
+    .......#..
+    #.........
+    ..........
+    ......#...
+    .#........
+    .........#
+    ..........
+    .......#..
+    #...#.....
+    """
+  )
+```
+
+```elixir
+universe =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+  |> Stream.map(fn line -> String.split(line, "", trim: true) end)
+  |> Stream.map(&Enum.with_index/1)
+  |> Stream.with_index()
+  |> Stream.flat_map(fn {line, y} -> Stream.map(line, fn {item, x} -> {{x, y}, item} end) end)
+  |> Enum.into(%{})
+```
+
+````elixir
+import Kino.Shorts
+
+defmodule CosmicExpansion do
+  def draw(universe) do
+    {max_x, max_y} = get_bounds(universe)
+
+    text =
+      Enum.map(0..max_y, fn y ->
+        Enum.map(0..max_x, fn x -> universe[{x, y}] end)
+        |> Enum.join("")
+      end)
+      |> Enum.join("\n")
+
+    Kino.Shorts.markdown("""
+    ```
+    #{text}
+    ```
+    """)
+  end
+
+  def expand(universe) do
+    {empty_rows, empty_cols} = get_empties(universe)
+
+    universe
+    |> Enum.map(fn {{x, y}, c} ->
+      shift_x = Enum.count(empty_cols, fn ex -> x > ex end)
+      shift_y = Enum.count(empty_rows, fn ey -> y > ey end)
+
+      {{x + shift_x, y + shift_y}, c}
+    end)
+    |> then(fn u ->
+      {max_x, max_y} = get_bounds(universe)
+
+      new_cols =
+        empty_cols
+        |> Enum.with_index()
+        |> Enum.flat_map(fn {i, x} ->
+          Enum.map(0..(max_y + length(empty_rows)), &{{x + 1 + i, &1}, "."})
+        end)
+
+      new_rows =
+        empty_rows
+        |> Enum.with_index()
+        |> Enum.flat_map(fn {i, y} ->
+          Enum.map(0..(max_x + length(empty_cols)), &{{&1, y + 1 + i}, "."})
+        end)
+
+      List.flatten([u, new_cols, new_rows])
+    end)
+    |> Enum.into(%{})
+  end
+
+  def get_bounds(universe) do
+    Enum.reduce(universe, {0, 0}, fn {{x, y}, _}, {max_x, max_y} ->
+      {max(max_x, x), max(max_y, y)}
+    end)
+  end
+
+  def get_empties(universe) do
+    {max_x, max_y} = get_bounds(universe)
+
+    empty_cols =
+      Enum.reduce(0..max_x, [], fn x, acc ->
+        if Enum.all?(0..max_y, fn y -> universe[{x, y}] === "." end) do
+          acc ++ [x]
+        else
+          acc
+        end
+      end)
+
+    empty_rows =
+      Enum.reduce(0..max_x, [], fn y, acc ->
+        if Enum.all?(0..max_x, fn x -> universe[{x, y}] === "." end) do
+          acc ++ [y]
+        else
+          acc
+        end
+      end)
+
+    {empty_rows, empty_cols}
+  end
+end
+````
+
+## Part 1
+
+```elixir
+expanded_universe = CosmicExpansion.expand(universe)
+```
+
+```elixir
+CosmicExpansion.draw(universe)
+```
+
+```elixir
+CosmicExpansion.draw(expanded_universe)
+```
+
+```elixir
+galaxies =
+  Enum.filter(expanded_universe, fn
+    {_, "#"} -> true
+    _ -> false
+  end)
+
+for l <- galaxies, r <- galaxies, l !== r do
+  {l, r}
+end
+|> Enum.uniq()
+|> Enum.count()
+```
+
+## Part 2
+
+```elixir
+
+```
