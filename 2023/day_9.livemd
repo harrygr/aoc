@@ -53,6 +53,7 @@ end
 parsed_input
 |> Stream.map(&MirageMaintenance.get_next/1)
 |> Enum.sum()
+|> dbg()
 ```
 
 ## Part 2

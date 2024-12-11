@@ -57,7 +57,7 @@ defmodule CosmicExpansion do
     """)
   end
 
-  def expand(universe) do
+  def expand(universe, by \\ 1) do
     {empty_rows, empty_cols} = get_empties(universe)
 
     universe
@@ -65,21 +65,21 @@ defmodule CosmicExpansion do
       shift_x = Enum.count(empty_cols, fn ex -> x > ex end)
       shift_y = Enum.count(empty_rows, fn ey -> y > ey end)
 
-      {{x + shift_x, y + shift_y}, c}
+      {{x + shift_x * by, y + shift_y * by}, c}
     end)
     |> then(fn u ->
       {max_x, max_y} = get_bounds(universe)
 
       new_cols =
         empty_cols
-        |> Enum.with_index()
+        |> Stream.with_index()
         |> Enum.flat_map(fn {i, x} ->
           Enum.map(0..(max_y + length(empty_rows)), &{{x + 1 + i, &1}, "."})
         end)
 
       new_rows =
         empty_rows
-        |> Enum.with_index()
+        |> Stream.with_index()
         |> Enum.flat_map(fn {i, y} ->
           Enum.map(0..(max_x + length(empty_cols)), &{{&1, y + 1 + i}, "."})
         end)
@@ -98,19 +98,19 @@ defmodule CosmicExpansion do
   def get_empties(universe) do
     {max_x, max_y} = get_bounds(universe)
 
-    empty_cols =
-      Enum.reduce(0..max_x, [], fn x, acc ->
-        if Enum.all?(0..max_y, fn y -> universe[{x, y}] === "." end) do
-          acc ++ [x]
+    empty_rows =
+      Enum.reduce(0..max_y, [], fn y, acc ->
+        if Enum.all?(0..max_x, fn x -> universe[{x, y}] === "." end) do
+          acc ++ [y]
         else
           acc
         end
       end)
 
-    empty_rows =
-      Enum.reduce(0..max_x, [], fn y, acc ->
-        if Enum.all?(0..max_x, fn x -> universe[{x, y}] === "." end) do
-          acc ++ [y]
+    empty_cols =
+      Enum.reduce(0..max_x, [], fn x, acc ->
+        if Enum.all?(0..max_y, fn y -> universe[{x, y}] === "." end) do
+          acc ++ [x]
         else
           acc
         end
@@ -121,36 +121,62 @@ defmodule CosmicExpansion do
 end
 ````
 
+```elixir
+defmodule RC do
+  def comb(0, _), do: [[]]
+  def comb(_, []), do: []
+
+  def comb(m, [h | t]) do
+    for(l <- comb(m - 1, t), do: [h | l]) ++ comb(m, t)
+  end
+end
+```
+
+```elixir
+defmodule CosmicExpansion.Math do
+  def manhattan_dist({{x1, y1}, {x2, y2}}) do
+    abs(x1 - x2) + abs(y1 - y2)
+  end
+end
+```
+
+```elixir
+# CosmicExpansion.expand(universe)
+# |> CosmicExpansion.draw()
+```
+
 ## Part 1
 
 ```elixir
 expanded_universe = CosmicExpansion.expand(universe)
-```
 
-```elixir
-CosmicExpansion.draw(universe)
-```
-
-```elixir
-CosmicExpansion.draw(expanded_universe)
-```
-
-```elixir
 galaxies =
   Enum.filter(expanded_universe, fn
     {_, "#"} -> true
     _ -> false
   end)
 
-for l <- galaxies, r <- galaxies, l !== r do
-  {l, r}
-end
-|> Enum.uniq()
-|> Enum.count()
+combinations = RC.comb(2, galaxies)
+
+combinations
+|> Stream.map(fn [{c1, _}, {c2, _}] -> CosmicExpansion.Math.manhattan_dist({c1, c2}) end)
+|> Enum.sum()
 ```
 
 ## Part 2
 
 ```elixir
+expanded_universe = CosmicExpansion.expand(universe, 999_999)
 
+galaxies =
+  Enum.filter(expanded_universe, fn
+    {_, "#"} -> true
+    _ -> false
+  end)
+
+combinations = RC.comb(2, galaxies)
+
+combinations
+|> Stream.map(fn [{c1, _}, {c2, _}] -> CosmicExpansion.Math.manhattan_dist({c1, c2}) end)
+|> Enum.sum()
 ```
